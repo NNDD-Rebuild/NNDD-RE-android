@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+/build/
+app/build/
+**/build/
+
+# Local properties (SDK path, signing config)
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Kotlin
+.kotlin/
+
+# Android
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# APK / AAB (don't commit build artifacts)
+*.apk
+*.aab
+
+# Claude
+CLAUDE.md
+.claude/

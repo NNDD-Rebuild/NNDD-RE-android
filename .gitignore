@@ -27,6 +27,9 @@ Thumbs.db
 *.apk
 *.aab
 
+# Gradle daemon (auto-generated)
+gradle/gradle-daemon-jvm.properties
+
 # Claude
 CLAUDE.md
 .claude/

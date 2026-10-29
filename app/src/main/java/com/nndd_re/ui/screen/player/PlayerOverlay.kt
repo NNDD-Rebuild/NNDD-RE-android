@@ -105,6 +105,7 @@ fun PlayerOverlay(
     var currentPositionMs by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     var showComments by remember { mutableStateOf(true) }
+    var descTab by remember { mutableIntStateOf(0) }  // 0=説明 1=コメント一覧
     var isPlaying by remember { mutableStateOf(true) }
     var isSeeking by remember { mutableStateOf(false) }
     var seekValue by remember { mutableFloatStateOf(0f) }
@@ -495,9 +496,26 @@ fun PlayerOverlay(
                     .offset { IntOffset(0, descTopY.toInt()) }
                     .heightIn(max = with(density) { (screenH - descTopY).toDp() })
                     .alpha(descAlpha)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp)
             ) {
+                TabRow(selectedTabIndex = descTab, containerColor = Color.Transparent) {
+                    Tab(selected = descTab == 0, onClick = { descTab = 0 }, text = { Text("説明") })
+                    Tab(selected = descTab == 1, onClick = { descTab = 1 }, text = { Text("コメント ${comments.size}") })
+                }
+                if (descTab == 1) {
+                    CommentListPanel(
+                        comments = comments,
+                        currentPositionMs = currentPositionMs,
+                        onSeek = { player.seekTo(it) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 8.dp)
+                ) {
                 video?.let { v ->
                     Text(
                         text = v.videoName,
@@ -592,6 +610,7 @@ fun PlayerOverlay(
                         )
                     }
                     Spacer(Modifier.height(80.dp))
+                }
                 }
             }
         }

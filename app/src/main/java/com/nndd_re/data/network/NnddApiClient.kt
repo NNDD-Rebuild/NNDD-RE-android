@@ -12,20 +12,20 @@ object NnddApiClient {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    fun build(host: String, port: Int): NnddApi {
+    fun build(scheme: String, host: String, port: Int): NnddApi {
         return Retrofit.Builder()
-            .baseUrl(baseUrl(host, port))
+            .baseUrl(baseUrl(scheme, host, port))
             .client(okhttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(NnddApi::class.java)
     }
 
-    fun baseUrl(host: String, port: Int) = "http://$host:$port/"
+    fun baseUrl(scheme: String, host: String, port: Int) = "$scheme://$host:$port/"
 
-    fun streamUrl(host: String, port: Int, id: String) =
-        "http://$host:$port/api/video/$id/stream"
+    fun streamUrl(scheme: String, host: String, port: Int, id: String) =
+        "$scheme://$host:$port/api/video/$id/stream"
 
-    fun thumbUrl(host: String, port: Int, id: String) =
-        "http://$host:$port/api/video/$id/thumb"
+    fun thumbUrl(scheme: String, host: String, port: Int, id: String) =
+        "$scheme://$host:$port/api/video/$id/thumb"
 }

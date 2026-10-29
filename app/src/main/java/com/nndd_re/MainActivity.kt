@@ -49,10 +49,11 @@ fun NnddApp() {
 
     val savedHost by ServerPreferences.hostFlow(ctx).collectAsState(initial = "")
     val savedPort by ServerPreferences.portFlow(ctx).collectAsState(initial = 12345)
+    val savedScheme by ServerPreferences.schemeFlow(ctx).collectAsState(initial = "http")
 
     val startDest = if (savedHost.isNotEmpty()) "library" else "settings"
-    val repo = remember(savedHost, savedPort) {
-        if (savedHost.isNotEmpty()) NnddRepository(savedHost, savedPort) else null
+    val repo = remember(savedHost, savedPort, savedScheme) {
+        if (savedHost.isNotEmpty()) NnddRepository(savedHost, savedPort, savedScheme) else null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

@@ -26,6 +26,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.nndd_re.data.repository.NnddRepository
 import com.nndd_re.util.FontEntry
 import com.nndd_re.util.NetworkDiscovery
+import com.nndd_re.util.ServerAddress
 import com.nndd_re.util.ServerPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -40,10 +41,12 @@ fun SettingsScreen(onConnected: () -> Unit) {
 
     val savedHost by ServerPreferences.hostFlow(ctx).collectAsState(initial = "")
     val savedPort by ServerPreferences.portFlow(ctx).collectAsState(initial = 12345)
+    val savedScheme by ServerPreferences.schemeFlow(ctx).collectAsState(initial = "http")
     val savedSkipSec by ServerPreferences.skipDurationFlow(ctx).collectAsState(initial = 10)
 
     var host by remember(savedHost) { mutableStateOf(savedHost) }
     var port by remember(savedPort) { mutableStateOf(savedPort.toString()) }
+    var scheme by remember(savedScheme) { mutableStateOf(savedScheme) }
     var skipSec by remember(savedSkipSec) { mutableStateOf(savedSkipSec.toString()) }
 
     val savedFontPath by ServerPreferences.commentFontPathFlow(ctx).collectAsState(initial = "")
@@ -128,7 +131,7 @@ fun SettingsScreen(onConnected: () -> Unit) {
                 LazyColumn {
                     items(scanResults) { ip ->
                         TextButton(
-                            onClick = { host = ip; showScanDialog = false },
+                            onClick = { host = ip; scheme = "http"; showScanDialog = false },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text(ip) }
                     }
@@ -245,7 +248,7 @@ fun SettingsScreen(onConnected: () -> Unit) {
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
-            label = { Text("ホストIP") },
+            label = { Text("ホスト (IP / URL)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -288,11 +291,14 @@ fun SettingsScreen(onConnected: () -> Unit) {
                 scanner.startScan()
                     .addOnSuccessListener { barcode: Barcode ->
                         barcode.rawValue?.let { raw ->
-                            val colonIdx = raw.lastIndexOf(':')
-                            if (colonIdx > 0) {
-                                host = raw.substring(0, colonIdx)
-                                port = raw.substring(colonIdx + 1)
+                            val addr = ServerAddress.parse(raw)
+                            if (addr != null) {
+                                scheme = addr.scheme
+                                host = addr.host
+                                port = addr.port.toString()
                                 status = "OK: QRコードから読み込みました"
+                            } else {
+                                status = "QRコードを接続先として読めませんでした"
                             }
                         }
                     }
@@ -317,7 +323,7 @@ fun SettingsScreen(onConnected: () -> Unit) {
                     scanning = false
                     when {
                         found.isEmpty() -> status = "NNDD-REが見つかりませんでした"
-                        found.size == 1 -> { host = found[0]; status = "OK: ${found[0]} を検出" }
+                        found.size == 1 -> { host = found[0]; scheme = "http"; status = "OK: ${found[0]} を検出" }
                         else -> { scanResults = found; showScanDialog = true }
                     }
                 }
@@ -431,12 +437,12 @@ fun SettingsScreen(onConnected: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = {
-                    val p = port.toIntOrNull() ?: 12345
+                    val (s, h, p) = resolveAddress(scheme, host, port)
                     testing = true
                     status = ""
                     scope.launch {
                         val ok = runCatching {
-                            NnddRepository(host.trim(), p).ping()
+                            NnddRepository(h, p, s).ping()
                         }.getOrDefault(false)
                         status = if (ok) "OK: 接続成功" else "NNDD-REが見つかりませんでした"
                         testing = false
@@ -450,9 +456,9 @@ fun SettingsScreen(onConnected: () -> Unit) {
 
             Button(
                 onClick = {
-                    val p = port.toIntOrNull() ?: 12345
+                    val (s, h, p) = resolveAddress(scheme, host, port)
                     scope.launch {
-                        ServerPreferences.save(ctx, host.trim(), p)
+                        ServerPreferences.save(ctx, h, p, s)
                         onConnected()
                     }
                 },
@@ -462,6 +468,15 @@ fun SettingsScreen(onConnected: () -> Unit) {
             }
         }
     }
+}
+
+/** ホスト欄にURLが貼られていればそれを優先し、なければ入力済みの scheme / host / port を使う */
+private fun resolveAddress(scheme: String, host: String, port: String): Triple<String, String, Int> {
+    val h = host.trim()
+    if (h.contains("://")) {
+        ServerAddress.parse(h)?.let { return Triple(it.scheme, it.host, it.port) }
+    }
+    return Triple(scheme, h, port.toIntOrNull() ?: if (scheme == "https") 443 else 12345)
 }
 
 private fun readFontFullName(file: File): String? = try {

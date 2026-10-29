@@ -5,11 +5,11 @@ import com.nndd_re.data.model.NnddVideo
 import com.nndd_re.data.network.NnddApi
 import com.nndd_re.data.network.NnddApiClient
 
-class NnddRepository(private val host: String, private val port: Int) {
+class NnddRepository(private val host: String, private val port: Int, private val scheme: String = "http") {
 
-    private val api: NnddApi = NnddApiClient.build(host, port)
+    private val api: NnddApi = NnddApiClient.build(scheme, host, port)
 
-    val baseUrl get() = NnddApiClient.baseUrl(host, port)
+    val baseUrl get() = NnddApiClient.baseUrl(scheme, host, port)
 
     suspend fun ping(): Boolean = runCatching {
         api.health().isSuccessful
@@ -27,7 +27,7 @@ class NnddRepository(private val host: String, private val port: Int) {
         api.comments(id)
     }
 
-    fun streamUrl(id: String) = NnddApiClient.streamUrl(host, port, id)
+    fun streamUrl(id: String) = NnddApiClient.streamUrl(scheme, host, port, id)
 
-    fun thumbUrl(id: String) = NnddApiClient.thumbUrl(host, port, id)
+    fun thumbUrl(id: String) = NnddApiClient.thumbUrl(scheme, host, port, id)
 }
